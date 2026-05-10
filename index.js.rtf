@@ -1,0 +1,1288 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling1\cocoaplatform1{\fonttbl\f0\fnil\fcharset0 .SFUI-Semibold;\f1\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red17\green17\blue17;}
+{\*\expandedcolortbl;;\cssrgb\c6700\c6700\c6700;}
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 // index.js
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 require("dotenv").config();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 const \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   default: makeWASocket,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   DisconnectReason,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   useMultiFileAuthState,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   fetchLatestBaileysVersion,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   makeInMemoryStore,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   jidNormalizedUser,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   downloadMediaMessage
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \} = require("@whiskeysockets/baileys");
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 const P = require("pino");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 const fs = require("fs");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 const axios = require("axios");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 const \{ Boom \} = require("@hapi/boom");
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 process.on("uncaughtException", console.error);
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 process.on("unhandledRejection", console.error);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 const OWNER_PHONE = process.env.OWNER_PHONE.replace(/\\D/g, "");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 const AUTO_REPLY_FILE = "./database/autoReply.json";
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 const MEMORY_FILE = "./database/memory.json";
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 const SETTINGS_FILE = "./database/settings.json";
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 if (!fs.existsSync("./database")) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   fs.mkdirSync("./database");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 function loadJSON(file, fallback = \{\}) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   if (!fs.existsSync(file)) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     fs.writeFileSync(file, JSON.stringify(fallback, null, 2));
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   return JSON.parse(fs.readFileSync(file));
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 function saveJSON(file, data) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   fs.writeFileSync(file, JSON.stringify(data, null, 2));
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 let autoReply = loadJSON(AUTO_REPLY_FILE, \{\});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 let memory = loadJSON(MEMORY_FILE, \{\});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 let settings = loadJSON(SETTINGS_FILE, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   autoReply: true
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 const store = makeInMemoryStore(\{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   logger: P().child(\{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     level: "silent",
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     stream: "store"
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   \})
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 function normalizeNumber(number) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   return number.replace(/\\D/g, "");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 function isOwner(sender) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   return sender.includes(OWNER_PHONE);
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 function extractText(message) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   if (!message) return "";
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   return (
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     message.conversation ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     message.extendedTextMessage?.text ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     message.imageMessage?.caption ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     message.videoMessage?.caption ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     ""
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   );
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 async function askAI(prompt, user) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   try \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     const res = await axios.post(
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       `{\field{\*\fldinst{HYPERLINK "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$%7BGEMINI_API_KEY%7D%60"}}{\fldrslt https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$\{GEMINI_API_KEY\}`}},
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         contents: [
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             parts: [
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2                 text: `
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u1571 \u1606 \u1578  \u1576 \u1608 \u1578  \u1608 \u1575 \u1578 \u1587 \u1575 \u1576  \u1575 \u1581 \u1578 \u1585 \u1575 \u1601 \u1610  \u1582 \u1575 \u1589  \u1576  ABID SHOP \u55357 \u56840 \u55357 \u56613 
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u1578 \u1603 \u1604 \u1605  \u1583 \u1575 \u1574 \u1605 \u1575 \u1611  \u1576 \u1575 \u1604 \u1583 \u1575 \u1585 \u1580 \u1577  \u1575 \u1604 \u1605 \u1594 \u1585 \u1576 \u1610 \u1577  \u1575 \u1604 \u1591 \u1576 \u1610 \u1593 \u1610 \u1577 .
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u1602 \u1589 \u1610 \u1585  \u1601 \u1575 \u1604 \u1607 \u1590 \u1585 \u1577 .
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u1575 \u1581 \u1578 \u1585 \u1575 \u1601 \u1610 .
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u1584 \u1603 \u1610 .
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u1605 \u1590 \u1581 \u1603  \u1571 \u1581 \u1610 \u1575 \u1606 \u1575 \u1611 .
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u1605 \u1575  \u1578 \u1576 \u1575 \u1606 \u1588  \u1585 \u1608 \u1576 \u1608 .
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u1575 \u1604 \u1582 \u1583 \u1605 \u1575 \u1578 :
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 - \uc0\u1581 \u1587 \u1575 \u1576 \u1575 \u1578  Free Fire
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 - \uc0\u1588 \u1581 \u1606  \u1575 \u1604 \u1580 \u1608 \u1575 \u1607 \u1585 
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 - AI
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 - \uc0\u1575 \u1604 \u1578 \u1589 \u1605 \u1610 \u1605 
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 - \uc0\u1582 \u1583 \u1605 \u1575 \u1578  \u1585 \u1602 \u1605 \u1610 \u1577 
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u1573 \u1584 \u1575  \u1605 \u1601 \u1607 \u1605 \u1578 \u1610 \u1588  \u1575 \u1604 \u1585 \u1587 \u1575 \u1604 \u1577  \u1585 \u1580 \u1593  \u1601 \u1602 \u1591 :
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 __UNKNOWN__
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u1575 \u1587 \u1605  \u1575 \u1604 \u1586 \u1576 \u1608 \u1606 :
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 $\{user\}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u1575 \u1604 \u1585 \u1587 \u1575 \u1604 \u1577 :
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 $\{prompt\}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 `
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             ]
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         ]
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \},
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         headers: \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           "Content-Type": "application/json"
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     );
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     return res.data.candidates[0].content.parts[0].text.trim();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   \} catch (err) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     console.log(err.response?.data || err.message);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     return "\uc0\u1582 \u1608 \u1610 \u1575  \u1593 \u1606 \u1583 \u1606 \u1575  \u1590 \u1594 \u1591  \u1583 \u1575 \u1576 \u1575  \u55357 \u56837  \u1580 \u1585 \u1576  \u1576 \u1593 \u1583  \u1588 \u1608 \u1610 \u1577 ";
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 async function transcribeAudio(buffer) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   return "";
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 async function startBot() \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   const \{ state, saveCreds \} =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     await useMultiFileAuthState("session");
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   const \{ version \} =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     await fetchLatestBaileysVersion();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   const sock = makeWASocket(\{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     version,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     logger: P(\{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       level: "silent"
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     \}),
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     printQRInTerminal: false,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     auth: state,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     browser: ["ABID SHOP", "Chrome", "1.0.0"]
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   store.bind(sock.ev);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   if (!sock.authState.creds.registered) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     const code =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       await sock.requestPairingCode(OWNER_PHONE);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     console.log(`
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 \uc0\u55357 \u56613  Pairing Code:
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 $\{code\}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 `);
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   sock.ev.on("creds.update", saveCreds);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   sock.ev.on("connection.update", async (update) => \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     const \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       connection,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       lastDisconnect
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     \} = update;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     if (connection === "close") \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       const shouldReconnect =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         new Boom(lastDisconnect?.error)?.output?.statusCode !==
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         DisconnectReason.loggedOut;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       console.log("\uc0\u55357 \u56580  Reconnecting...");
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (shouldReconnect) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         startBot();
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     if (connection === "open") \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       console.log("\uc0\u55357 \u56613  ABID SHOP BOT CONNECTED");
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2     \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2   \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   sock.ev.on("messages.upsert", async (\{ messages \}) => \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     try \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       const msg = messages[0];
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (!msg.message) return;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (msg.key.fromMe) return;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       const sender =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         jidNormalizedUser(msg.key.remoteJid);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       const senderNumber =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         sender.split("@")[0];
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       let text =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         extractText(msg.message).trim();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (!text) return;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       console.log(senderNumber, ":", text);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // OWNER SYSTEM
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (isOwner(senderNumber)) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         const lower = text.toLowerCase();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         if (
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           lower === "\uc0\u1575 \u1606 \u1575  \u1575 \u1604 \u1605 \u1575 \u1604 \u1603 " ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           lower === "owner" ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           lower === "boss"
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         ) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             text: "\uc0\u55357 \u56613 \u55357 \u56840  \u1571 \u1605 \u1585 \u1603  \u1605 \u1575 \u1604 \u1603 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         if (lower.startsWith("\uc0\u1606 \u1601 \u1583 ")) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           const command =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             text.slice(4).trim();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           // OFF AUTO REPLY
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           if (command.includes("\uc0\u1608 \u1602 \u1601  \u1575 \u1604 \u1585 \u1583 ")) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             settings.autoReply = false;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             saveJSON(SETTINGS_FILE, settings);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               text: "\uc0\u9989  \u1578 \u1605  \u1573 \u1610 \u1602 \u1575 \u1601  \u1575 \u1604 \u1585 \u1583  \u1575 \u1604 \u1578 \u1604 \u1602 \u1575 \u1574 \u1610 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           // ON AUTO REPLY
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           if (command.includes("\uc0\u1588 \u1594 \u1604  \u1575 \u1604 \u1585 \u1583 ")) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             settings.autoReply = true;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             saveJSON(SETTINGS_FILE, settings);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               text: "\uc0\u55357 \u56613  \u1578 \u1605  \u1578 \u1588 \u1594 \u1610 \u1604  \u1575 \u1604 \u1585 \u1583  \u1575 \u1604 \u1578 \u1604 \u1602 \u1575 \u1574 \u1610 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           // REPLY CLIENT
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           const replyMatch =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             command.match(
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               /\uc0\u1585 \u1583  \u1593 \u1604 \u1609 \\s+(\\+?\\d+)\\s*:\\s*([\\s\\S]+)/i
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             );
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           if (replyMatch) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             const number =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               normalizeNumber(replyMatch[1]);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             const replyText =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               replyMatch[2];
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             await sock.sendMessage(
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               number + "@s.whatsapp.net",
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2                 text: replyText
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             );
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             autoReply[number] = replyText;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             saveJSON(
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               AUTO_REPLY_FILE,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               autoReply
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             );
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2             return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2               text: "\uc0\u9989  \u1575 \u1604 \u1585 \u1587 \u1575 \u1604 \u1577  \u1578 \u1589 \u1610 \u1601 \u1591 \u1575 \u1578 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2           return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             text: "\uc0\u55357 \u56840  \u1578 \u1606 \u1601 \u1584  \u1575 \u1604 \u1571 \u1605 \u1585 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         // OWNER CHAT
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         const ownerAI =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           await askAI(text, "OWNER");
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           text: ownerAI
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // CLIENT SYSTEM
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (!settings.autoReply) return;
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       const lower = text.toLowerCase();
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // GREETING
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         lower.includes("\uc0\u1587 \u1604 \u1575 \u1605 ") ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         lower.includes("hi") ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         lower.includes("hello")
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       ) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           text:
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 `\uc0\u55357 \u56613 \u55357 \u56840  \u1571 \u1607 \u1604 \u1575 ! \u1605 \u1585 \u1581 \u1576 \u1575  \u1576 \u1610 \u1603  \u1601  ABID SHOP
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u1588 \u1606 \u1608  \u1575 \u1604 \u1582 \u1583 \u1605 \u1577  \u1575 \u1604 \u1604 \u1610  \u1576 \u1594 \u1610 \u1578 \u1610  \u1575 \u1604 \u1610 \u1608 \u1605 \u1567 `
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // SELL ACCOUNT
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         lower.includes("\uc0\u1606 \u1576 \u1610 \u1593  \u1603 \u1608 \u1606 \u1591 ") ||
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         lower.includes("\uc0\u1576 \u1594 \u1610 \u1578  \u1606 \u1576 \u1610 \u1593  \u1603 \u1608 \u1606 \u1591 ")
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       ) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           text: "\uc0\u1589 \u1610 \u1601 \u1591  \u1575 \u1604 \u1578 \u1589 \u1575 \u1608 \u1585  \u1608 \u1575 \u1604 \u1579 \u1605 \u1606  \u1575 \u1604 \u1604 \u1610  \u1576 \u1575 \u1594 \u1610  \u55357 \u56840 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // EXCHANGE
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         lower.includes("\uc0\u1578 \u1576 \u1583 \u1610 \u1604 ")
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       ) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           text: "\uc0\u1581 \u1575 \u1604 \u1610 \u1575 \u1611  \u1575 \u1604 \u1578 \u1576 \u1583 \u1610 \u1604  \u1605 \u1575 \u1603 \u1575 \u1606 \u1583 \u1610 \u1585 \u1608 \u1588  \u55357 \u56837 "
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // LEARNED REPLY
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (autoReply[senderNumber]) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         return sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           text: autoReply[senderNumber]
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         \});
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // AI REPLY
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       const aiReply =
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         await askAI(text, senderNumber);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // UNKNOWN MESSAGE
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (aiReply === "__UNKNOWN__") \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         await sock.sendMessage(
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           OWNER_PHONE + "@s.whatsapp.net",
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2             text:
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 `\uc0\u55357 \u56596  \u1585 \u1587 \u1575 \u1604 \u1577  \u1580 \u1583 \u1610 \u1583 \u1577  \u1605 \u1606  \u1603 \u1604 \u1610 \u1575 \u1606 
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u55357 \u56561  \u1575 \u1604 \u1585 \u1602 \u1605 : +$\{senderNumber\}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \uc0\u55357 \u56492  \u1575 \u1604 \u1585 \u1587 \u1575 \u1604 \u1577 :
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2 $\{text\}`
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2           \}
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         );
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2         return;
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // MEMORY
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       if (!memory[senderNumber]) \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         memory[senderNumber] = [];
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       memory[senderNumber].push(\{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         user: text,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         bot: aiReply,
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         time: Date.now()
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       saveJSON(MEMORY_FILE, memory);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       // SEND MESSAGE
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       await sock.sendMessage(sender, \{
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2         text: aiReply
+\f1\fs24 \cf0 \
+
+\f0\fs34 \cf2       \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     \} catch (err) \{
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2       console.log("ERROR:", err.message);
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2     \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2   \});
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 \}
+\f1\fs24 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\qr\partightenfactor0
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl283\slmult1\pardirnatural\partightenfactor0
+
+\f0\fs34 \cf2 startBot();}
