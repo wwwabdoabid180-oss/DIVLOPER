@@ -6,6 +6,7 @@ const {
   default: makeWASocket,
   DisconnectReason,
   useMultiFileAuthState,
+  fetchLatestBaileysVersion,
   // makeInMemoryStore,
 } = require("@whiskeysockets/baileys");
 const P = require("pino");
