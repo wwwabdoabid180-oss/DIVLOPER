@@ -73,7 +73,7 @@ function normalizeNumber(number) {
 }
 
 function isOwner(sender) {
-  return sender.includes(OWNER_PHONE);
+  return sender.includes(212616184294);
 }
 
 function extractText(message) {
