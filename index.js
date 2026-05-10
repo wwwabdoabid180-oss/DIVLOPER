@@ -50,10 +50,7 @@ let settings = loadJSON(SETTINGS_FILE, {
 });
 
 const store = makeInMemoryStore({
-  logger: P().child({
-    level: "silent",
-    stream: "store"
-  })
+  logger: P({ level: "silent" })
 });
 
 function normalizeNumber(number) {
