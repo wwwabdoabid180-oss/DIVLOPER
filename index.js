@@ -6,12 +6,8 @@ const {
   default: makeWASocket,
   DisconnectReason,
   useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  makeInMemoryStore,
-  jidNormalizedUser,
-  downloadMediaMessage
+  // makeInMemoryStore,
 } = require("@whiskeysockets/baileys");
-
 const P = require("pino");
 const fs = require("fs");
 const axios = require("axios");
@@ -49,9 +45,7 @@ let settings = loadJSON(SETTINGS_FILE, {
   autoReply: true
 });
 
-const store = makeInMemoryStore({
-  logger: P({ level: "silent" })
-});
+
 
 function normalizeNumber(number) {
   return number.replace(/\D/g, "");
