@@ -1,7 +1,9 @@
 {
   "name": "abid-shop-bot",
   "version": "1.0.0",
+  "description": "ABID SHOP WhatsApp AI Bot 😈🔥",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
