@@ -21,8 +21,8 @@ const { Boom } = require("@hapi/boom");
 process.on("uncaughtException", console.error);
 process.on("unhandledRejection", console.error);
 
-const OWNER_PHONE = process.env.OWNER_PHONE.replace(/\D/g, "");
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OWNER_PHONE = (process.env.OWNER_PHONE || "").replace(/\D/g, "");
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 const AUTO_REPLY_FILE = "./database/autoReply.json";
 const MEMORY_FILE = "./database/memory.json";
