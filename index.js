@@ -50,12 +50,7 @@ let settings = loadJSON(SETTINGS_FILE, {
   autoReply: true
 });
 
-const store = makeInMemoryStore({
-  logger: P().child({
-    level: "silent",
-    stream: "store"
-  })
-});
+const store = { bind: () => {} };
 
 function normalizeNumber(number) {
   return number.replace(/\D/g, "");
